@@ -1,0 +1,2649 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VibrationLab — Guided Resonance Simulator</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+    :root {
+        --bg: #f4f7fb;
+        --card: #ffffff;
+        --surface: #f8fafc;
+        --text: #0f172a;
+        --muted: #475569;
+        --subtle: #64748b;
+        --border: #dbe3ef;
+        --accent: #2563eb;
+        --accent-dark: #1d4ed8;
+        --accent-soft: #dbeafe;
+        --green: #16a34a;
+        --green-soft: #dcfce7;
+        --orange: #d97706;
+        --orange-soft: #ffedd5;
+        --red: #dc2626;
+        --red-soft: #fee2e2;
+        --purple: #7c3aed;
+        --purple-soft: #ede9fe;
+        --shadow: 0 12px 34px rgba(15, 23, 42, 0.08);
+        --journal-font: "Times New Roman", Times, serif;
+        --radius: 20px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+        margin: 0;
+        font-family: Inter, Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.5;
+    }
+
+    a {
+        color: var(--accent);
+    }
+
+    button, input, select {
+        font: inherit;
+    }
+
+    button:focus-visible, input:focus-visible, select:focus-visible {
+        outline: 3px solid #93c5fd;
+        outline-offset: 2px;
+    }
+
+    .hero {
+        background:
+            radial-gradient(circle at top left, rgba(37,99,235,0.20), transparent 34%),
+            linear-gradient(135deg, #ffffff, #eef6ff 54%, #f8fafc);
+        border-bottom: 1px solid var(--border);
+        padding: 28px 34px 24px;
+    }
+
+    .hero-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        align-items: flex-start;
+        max-width: 1500px;
+        margin: 0 auto;
+    }
+
+    .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 10px;
+    }
+
+    .logo {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        background: var(--accent);
+        color: white;
+        display: grid;
+        place-items: center;
+        font-weight: 900;
+        font-size: 22px;
+        box-shadow: 0 10px 22px rgba(37,99,235,0.25);
+    }
+
+    h1 {
+        font-size: clamp(28px, 4vw, 44px);
+        letter-spacing: -0.05em;
+        line-height: 1.05;
+        margin: 0 0 12px;
+    }
+
+    .subtitle {
+        max-width: 920px;
+        color: var(--muted);
+        font-size: 17px;
+        margin: 0;
+    }
+
+    .equation-card {
+        min-width: 330px;
+        max-width: 430px;
+        background: rgba(255,255,255,0.86);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 18px;
+        box-shadow: var(--shadow);
+    }
+
+    .equation-title {
+        font-size: 13px;
+        color: var(--subtle);
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 8px;
+    }
+
+    .equation {
+        font-family: Georgia, serif;
+        font-size: 20px;
+        color: var(--text);
+        white-space: nowrap;
+        overflow-x: auto;
+        padding-bottom: 2px;
+    }
+
+    .equation-help {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 14px;
+    }
+
+    .toolbar {
+        max-width: 1500px;
+        margin: 18px auto 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .toolbar button, .chip-button {
+        border: 1px solid var(--border);
+        background: white;
+        color: #334155;
+        border-radius: 999px;
+        padding: 9px 14px;
+        cursor: pointer;
+        font-weight: 800;
+        transition: 0.15s ease;
+    }
+
+    .toolbar button:hover, .chip-button:hover {
+        background: var(--accent-soft);
+        color: var(--accent-dark);
+        border-color: #93c5fd;
+    }
+
+    .toolbar button.active {
+        background: var(--accent);
+        color: white;
+        border-color: var(--accent);
+    }
+
+    .app {
+        max-width: 1500px;
+        height: calc(100vh - 178px);
+        min-height: 620px;
+        margin: 0 auto;
+        padding: 22px;
+        display: grid;
+        grid-template-columns: 400px minmax(0, 1fr);
+        gap: 22px;
+        align-items: stretch;
+        overflow: hidden;
+    }
+
+    .sidebar {
+        height: 100%;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding-right: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        scrollbar-gutter: stable;
+    }
+
+    .sidebar::-webkit-scrollbar,
+    .main::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    .sidebar::-webkit-scrollbar-track,
+    .main::-webkit-scrollbar-track {
+        background: #eaf0f8;
+        border-radius: 999px;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb,
+    .main::-webkit-scrollbar-thumb {
+        background: #b7c4d8;
+        border-radius: 999px;
+        border: 2px solid #eaf0f8;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb:hover,
+    .main::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
+    .scroll-label {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        align-self: flex-start;
+        padding: 7px 11px;
+        margin-bottom: -4px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.84);
+        color: white;
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: 0.02em;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 8px 18px rgba(15,23,42,0.14);
+    }
+
+    .results-label {
+        margin-bottom: -6px;
+    }
+
+    .card {
+        background: var(--card);
+        border: 1px solid rgba(219, 227, 239, 0.95);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 20px;
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-start;
+        margin-bottom: 14px;
+    }
+
+    h2 {
+        font-size: 20px;
+        line-height: 1.2;
+        margin: 0;
+        letter-spacing: -0.02em;
+    }
+
+    h3 {
+        font-size: 15px;
+        margin: 0 0 8px;
+    }
+
+    .small-note {
+        color: var(--subtle);
+        font-size: 13px;
+        margin-top: 5px;
+    }
+
+    .presets {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .preset {
+        border: 1px solid var(--border);
+        background: var(--surface);
+        border-radius: 16px;
+        padding: 13px;
+        cursor: pointer;
+        text-align: left;
+        transition: 0.15s ease;
+    }
+
+    .preset:hover {
+        border-color: #93c5fd;
+        background: #eff6ff;
+        transform: translateY(-1px);
+    }
+
+    .preset strong {
+        display: block;
+        color: var(--text);
+        margin-bottom: 3px;
+    }
+
+    .preset span {
+        display: block;
+        font-size: 13px;
+        color: var(--muted);
+    }
+
+    .tabs {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-bottom: 14px;
+        background: var(--surface);
+        border-radius: 16px;
+        padding: 6px;
+        border: 1px solid var(--border);
+    }
+
+    .tab-button {
+        border: 0;
+        background: transparent;
+        padding: 10px 8px;
+        border-radius: 12px;
+        color: var(--muted);
+        font-weight: 900;
+        cursor: pointer;
+    }
+
+    .tab-button.active {
+        background: white;
+        color: var(--accent-dark);
+        box-shadow: 0 4px 12px rgba(15,23,42,0.08);
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .control {
+        margin-bottom: 16px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid #eef2f7;
+    }
+
+    .control:last-child {
+        border-bottom: 0;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+
+    label {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: baseline;
+        font-size: 14px;
+        font-weight: 900;
+        margin-bottom: 7px;
+    }
+
+    label .value {
+        color: var(--accent);
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .hint {
+        font-size: 12px;
+        color: var(--subtle);
+        margin-top: 5px;
+    }
+
+    input[type="range"] {
+        width: 100%;
+        accent-color: var(--accent);
+    }
+
+    select {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: white;
+        padding: 11px;
+        color: var(--text);
+        font-weight: 700;
+    }
+
+    .status-card {
+        display: grid;
+        gap: 10px;
+    }
+
+    .status-badge {
+        border-radius: 16px;
+        padding: 13px 14px;
+        font-weight: 950;
+        text-align: center;
+        border: 1px solid;
+        font-size: 15px;
+    }
+
+    .low { background: var(--green-soft); color: #14532d; border-color: #86efac; }
+    .medium { background: var(--orange-soft); color: #7c2d12; border-color: #fdba74; }
+    .high { background: var(--red-soft); color: #7f1d1d; border-color: #fca5a5; }
+    .neutral { background: var(--accent-soft); color: #1e3a8a; border-color: #93c5fd; }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .info-item {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 10px;
+    }
+
+    .info-item .name {
+        font-size: 11px;
+        color: var(--subtle);
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+    }
+
+    .info-item .value {
+        margin-top: 4px;
+        font-weight: 900;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .alert {
+        padding: 12px;
+        border-radius: 14px;
+        border: 1px solid;
+        font-size: 13px;
+        line-height: 1.45;
+    }
+
+    .main {
+        min-width: 0;
+        height: 100%;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding-right: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+        scrollbar-gutter: stable;
+    }
+
+    .summary-grid {
+        display: grid;
+        grid-template-columns: 1.25fr .75fr;
+        gap: 18px;
+    }
+
+    .analysis-text {
+        margin: 0;
+        color: #334155;
+        line-height: 1.7;
+        font-size: 15px;
+    }
+
+    .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+    }
+
+    .pill {
+        border-radius: 999px;
+        padding: 7px 10px;
+        font-size: 12px;
+        font-weight: 900;
+        background: var(--accent-soft);
+        color: #1d4ed8;
+    }
+
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .metric {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 13px;
+        min-height: 88px;
+    }
+
+    .metric .name {
+        font-size: 12px;
+        color: var(--subtle);
+        font-weight: 800;
+        margin-bottom: 6px;
+    }
+
+    .metric .value {
+        font-size: 18px;
+        font-weight: 950;
+        font-variant-numeric: tabular-nums;
+        word-break: break-word;
+    }
+
+    .metric .note {
+        margin-top: 5px;
+        color: var(--subtle);
+        font-size: 11px;
+    }
+
+    .experiment-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0,1fr));
+        gap: 12px;
+    }
+
+    .experiment {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 14px;
+    }
+
+    .experiment .tag {
+        display: inline-block;
+        border-radius: 999px;
+        background: var(--purple-soft);
+        color: #5b21b6;
+        padding: 4px 8px;
+        font-size: 11px;
+        font-weight: 900;
+        margin-bottom: 8px;
+    }
+
+    .experiment p {
+        margin: 0;
+        color: #334155;
+        font-size: 13px;
+    }
+
+    .plot-card {
+        background: var(--card);
+        border: 1px solid rgba(219, 227, 239, 0.95);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 16px;
+        min-width: 0;
+    }
+
+    .plot-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 14px;
+        padding: 2px 4px 12px;
+    }
+
+    .plot-title {
+        font-weight: 950;
+        font-size: 17px;
+        color: var(--text);
+    }
+
+    .plot-help {
+        max-width: 610px;
+        text-align: right;
+        color: var(--subtle);
+        font-size: 12px;
+        line-height: 1.4;
+    }
+
+    .plot-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        margin-top: 8px;
+    }
+
+    .plot-save-btn {
+        border: 1px solid var(--border);
+        background: white;
+        color: #334155;
+        border-radius: 999px;
+        padding: 7px 11px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 900;
+        transition: 0.15s ease;
+    }
+
+    .plot-save-btn:hover {
+        background: var(--accent-soft);
+        color: var(--accent-dark);
+        border-color: #93c5fd;
+    }
+
+    .plot {
+        height: clamp(360px, 42vh, 460px);
+        width: 100%;
+        min-width: 0;
+    }
+
+    .plot-large {
+        height: clamp(420px, 52vh, 560px);
+        width: 100%;
+        min-width: 0;
+    }
+
+    .plot-card {
+        overflow: visible;
+    }
+
+    .js-plotly-plot .plotly .modebar {
+        right: 8px !important;
+        top: 6px !important;
+    }
+
+    .grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 22px;
+    }
+
+    .advanced-only.hidden,
+    .essential-hide.hidden {
+        display: none;
+    }
+
+    .formula-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0,1fr));
+        gap: 12px;
+    }
+
+    .formula {
+        background: #0f172a;
+        color: #f8fafc;
+        border-radius: 16px;
+        padding: 14px;
+        font-family: Georgia, serif;
+        font-size: 15px;
+        overflow-x: auto;
+    }
+
+    .journal-note {
+        margin-top: 12px;
+        padding: 13px;
+        border-radius: 14px;
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        color: #334155;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    .copy-box {
+        display: grid;
+        gap: 10px;
+    }
+
+    textarea {
+        width: 100%;
+        min-height: 130px;
+        resize: vertical;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 12px;
+        background: var(--surface);
+    }
+
+    .action-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .action-row button {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 10px 12px;
+        cursor: pointer;
+        font-weight: 900;
+        background: white;
+    }
+
+    .action-row button.primary {
+        background: var(--accent);
+        color: white;
+        border-color: var(--accent);
+    }
+
+    @media (max-width: 1200px) {
+        .hero-top, .summary-grid, .app, .grid-2 {
+            grid-template-columns: 1fr;
+        }
+
+        .hero-top {
+            display: block;
+        }
+
+        .equation-card {
+            margin-top: 18px;
+            max-width: none;
+        }
+
+        .app {
+            height: auto;
+            min-height: 0;
+            overflow: visible;
+        }
+
+        .sidebar,
+        .main {
+            height: auto;
+            overflow: visible;
+            padding-right: 0;
+        }
+
+        .scroll-label {
+            position: static;
+        }
+
+        .plot-help {
+            text-align: left;
+        }
+
+        .plot-header {
+            flex-direction: column;
+        }
+
+        .metrics-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .experiment-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .formula-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 680px) {
+        .hero {
+            padding: 22px 16px;
+        }
+
+        .app {
+            padding: 14px;
+        }
+
+        .metrics-grid, .info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .tabs {
+            grid-template-columns: 1fr;
+        }
+
+        .plot, .plot-large {
+            height: 360px;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        * {
+            scroll-behavior: auto !important;
+            transition: none !important;
+        }
+    }
+</style>
+</head>
+<body>
+
+<header class="hero">
+    <div class="hero-top">
+        <div>
+            <div class="brand">
+                <div class="logo" aria-hidden="true">V</div>
+                <strong>VibrationLab</strong>
+            </div>
+            <h1>Professional Linear & Nonlinear Vibration Simulator</h1>
+            <p class="subtitle">
+                A clean guided lab for exploring mass-spring-damper vibration, damping, resonance,
+                energy transfer, spectra, nonlinear stiffness, and phase-space behavior.
+            </p>
+        </div>
+
+        <div class="equation-card" aria-label="Equation of motion">
+            <div class="equation-title">Equation of motion</div>
+            <div class="equation">m x″ + c x′ + kx + αx³ = F₀ sin(ωt)</div>
+            <div class="equation-help">
+                Change each parameter and immediately see how the motion, resonance, energy, and frequency content respond.
+            </div>
+        </div>
+    </div>
+
+    <div class="toolbar" role="group" aria-label="View controls">
+        <button id="beginnerModeBtn" class="active" onclick="setLearningMode('beginner')">Beginner mode</button>
+        <button id="advancedModeBtn" onclick="setLearningMode('advanced')">Advanced mode</button>
+        <button onclick="scrollToSection('plotsStart')">Jump to plots</button>
+        <button onclick="scrollToSection('exportSection')">Export / copy</button>
+    </div>
+</header>
+
+<div class="app">
+    <aside class="sidebar" aria-label="Scrollable parameters panel">
+        <div class="scroll-label">Parameters panel</div>
+        <section class="card">
+            <div class="card-header">
+                <div>
+                    <h2>Start with a scenario</h2>
+                    <div class="small-note">Choose a preset, then adjust sliders.</div>
+                </div>
+            </div>
+
+            <div class="presets">
+                <button class="preset" onclick="applyPreset('free')">
+                    <strong>Free vibration</strong>
+                    <span>No external force. Starts from initial displacement and decays with damping.</span>
+                </button>
+                <button class="preset" onclick="applyPreset('resonance')">
+                    <strong>Near resonance</strong>
+                    <span>Excitation frequency is close to natural frequency, so amplitude grows.</span>
+                </button>
+                <button class="preset" onclick="applyPreset('highDamping')">
+                    <strong>High damping</strong>
+                    <span>Shows how damping suppresses resonance and speeds up decay.</span>
+                </button>
+                <button class="preset" onclick="applyPreset('hardening')">
+                    <strong>Hardening nonlinear stiffness</strong>
+                    <span>Positive α makes the spring stiffer at larger displacement.</span>
+                </button>
+                <button class="preset" onclick="applyPreset('softening')">
+                    <strong>Softening nonlinear stiffness</strong>
+                    <span>Negative α makes the spring softer at larger displacement.</span>
+                </button>
+                <button class="preset" onclick="applyPreset('beating')">
+                    <strong>Beating</strong>
+                    <span>Low damping and off-resonance forcing creates slowly changing amplitude.</span>
+                </button>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Parameters</h2>
+            <div class="tabs" role="tablist">
+                <button class="tab-button active" data-tab="system">System</button>
+                <button class="tab-button" data-tab="forcing">Forcing</button>
+                <button class="tab-button" data-tab="view">View</button>
+            </div>
+
+            <div id="system" class="tab-content active">
+                <div class="control">
+                    <label for="m">Mass m <span class="value" id="mVal"></span></label>
+                    <input id="m" type="range" min="0.1" max="10" step="0.1" value="1">
+                    <div class="hint">Higher mass usually lowers the natural frequency.</div>
+                </div>
+
+                <div class="control">
+                    <label for="c">Damping c <span class="value" id="cVal"></span></label>
+                    <input id="c" type="range" min="0" max="5" step="0.05" value="0.15">
+                    <div class="hint">Higher damping reduces resonance and dissipates energy faster.</div>
+                </div>
+
+                <div class="control">
+                    <label for="k">Linear stiffness k <span class="value" id="kVal"></span></label>
+                    <input id="k" type="range" min="1" max="120" step="1" value="20">
+                    <div class="hint">Higher stiffness usually raises the natural frequency.</div>
+                </div>
+
+                <div class="control">
+                    <label for="alpha">Nonlinear stiffness α <span class="value" id="alphaVal"></span></label>
+                    <input id="alpha" type="range" min="-800" max="800" step="10" value="0">
+                    <div class="hint">α = 0 is linear. α &gt; 0 hardening. α &lt; 0 softening.</div>
+                </div>
+
+                <div class="control">
+                    <label for="x0">Initial displacement x₀ <span class="value" id="x0Val"></span></label>
+                    <input id="x0" type="range" min="-2" max="2" step="0.05" value="0">
+                    <div class="hint">Useful for free-vibration tests.</div>
+                </div>
+
+                <div class="control">
+                    <label for="v0">Initial velocity v₀ <span class="value" id="v0Val"></span></label>
+                    <input id="v0" type="range" min="-6" max="6" step="0.1" value="0">
+                </div>
+            </div>
+
+            <div id="forcing" class="tab-content">
+                <div class="control">
+                    <label for="F0">Force amplitude F₀ <span class="value" id="F0Val"></span></label>
+                    <input id="F0" type="range" min="0" max="30" step="0.5" value="1">
+                    <div class="hint">Set F₀ = 0 for pure free vibration.</div>
+                </div>
+
+                <div class="control">
+                    <label for="omega">Excitation frequency ω <span class="value" id="omegaVal"></span></label>
+                    <input id="omega" type="range" min="0.1" max="25" step="0.1" value="4.4">
+                    <div class="hint">Resonance occurs when ω is near natural frequency ωₙ.</div>
+                </div>
+            </div>
+
+            <div id="view" class="tab-content">
+                <div class="control">
+                    <label for="tEnd">Simulation time <span class="value" id="tEndVal"></span></label>
+                    <input id="tEnd" type="range" min="10" max="220" step="5" value="80">
+                </div>
+
+                <div class="control">
+                    <label for="windowMode">Displayed time window</label>
+                    <select id="windowMode">
+                        <option value="full">Full response</option>
+                        <option value="transient">Transient first 40%</option>
+                        <option value="steady">Steady-state last 40%</option>
+                    </select>
+                    <div class="hint">Use steady-state for resonance/spectrum; transient for decay.</div>
+                </div>
+
+                <div class="control">
+                    <label for="plotDensity">Plot density</label>
+                    <select id="plotDensity">
+                        <option value="normal">Normal</option>
+                        <option value="high">High</option>
+                    </select>
+                    <div class="hint">High density is smoother but can be slower.</div>
+                </div>
+                <div id="exportStatus" class="small-note"></div>
+            </div>
+        </section>
+
+        <section class="card status-card">
+            <h2>System status</h2>
+            <div id="statusBadge" class="status-badge neutral">Calculating...</div>
+            <div class="info-grid" id="infoGrid"></div>
+            <div id="warningBox" class="alert neutral"></div>
+        </section>
+    </aside>
+
+    <main class="main" aria-label="Scrollable results and plots panel">
+        <div class="scroll-label results-label">Results and plots</div>
+        <section class="summary-grid">
+            <div class="card">
+                <h2>What is happening?</h2>
+                <p class="analysis-text" id="analysisText"></p>
+                <div class="pill-row" id="pillRow"></div>
+            </div>
+
+            <div class="card">
+                <h2>Suggested experiment</h2>
+                <p class="analysis-text" id="suggestionText"></p>
+                <div class="action-row" style="margin-top: 14px;">
+                    <button class="primary" onclick="runSuggestedExperiment()">Apply suggestion</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Key numerical results</h2>
+            <div class="metrics-grid" id="metrics"></div>
+        </section>
+
+        <section class="card">
+            <h2>Learning guide</h2>
+            <div class="experiment-grid">
+                <div class="experiment">
+                    <span class="tag">Step 1</span>
+                    <p><b>Find resonance:</b> move ω close to ωₙ and watch the amplitude increase.</p>
+                </div>
+                <div class="experiment">
+                    <span class="tag">Step 2</span>
+                    <p><b>Add damping:</b> increase c and observe how the resonance peak becomes lower and wider.</p>
+                </div>
+                <div class="experiment">
+                    <span class="tag">Step 3</span>
+                    <p><b>Add nonlinearity:</b> change α and compare phase portrait, spectrum, and Poincaré points.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="card advanced-only">
+            <h2>Core formulas</h2>
+            <div class="formula-grid">
+                <div class="formula">
+                    Natural frequency:<br>
+                    ωₙ = √(k / m)<br><br>
+                    Damping ratio:<br>
+                    ζ = c / (2√(km))
+                </div>
+                <div class="formula">
+                    Linear frequency response:<br>
+                    X(ω) = F₀ / √[(k − mω²)² + (cω)²]<br><br>
+                    Energy:<br>
+                    E = ½mv² + ½kx² + ¼αx⁴
+                </div>
+            </div>
+        </section>
+
+        <section class="plot-card" id="plotsStart">
+            <div class="plot-header">
+                <div class="plot-title">1. Time response: displacement and velocity</div>
+                <div class="plot-help">The main plot. It shows how displacement and velocity change over time.</div>
+            </div>
+            <div id="timePlot" class="plot-large"></div>
+        </section>
+
+        <section class="plot-card">
+            <div class="plot-header">
+                <div class="plot-title">2. Acceleration response</div>
+                <div class="plot-help">Full-width acceleration plot, useful when comparing with accelerometer measurements.</div>
+            </div>
+            <div id="accelPlot" class="plot-large"></div>
+        </section>
+
+        <section class="plot-card advanced-only">
+            <div class="plot-header">
+                <div class="plot-title">3. Force balance</div>
+                <div class="plot-help">Shows external, restoring, damping, and inertia forces.</div>
+            </div>
+            <div id="forcePlot" class="plot-large"></div>
+        </section>
+
+        <div class="grid-2">
+            <section class="plot-card">
+                <div class="plot-header">
+                    <div class="plot-title">4. Phase portrait</div>
+                    <div class="plot-help">A closed loop usually means periodic motion.</div>
+                </div>
+                <div id="phasePlot" class="plot"></div>
+            </section>
+
+            <section class="plot-card">
+                <div class="plot-header">
+                    <div class="plot-title">5. Energy exchange</div>
+                    <div class="plot-help">Shows energy moving between kinetic and potential forms.</div>
+                </div>
+                <div id="energyPlot" class="plot"></div>
+            </section>
+        </div>
+
+        <div class="grid-2 advanced-only">
+            <section class="plot-card">
+                <div class="plot-header">
+                    <div class="plot-title">6. Displacement spectrum</div>
+                    <div class="plot-help">Shows dominant frequencies and possible nonlinear harmonics.</div>
+                </div>
+                <div id="spectrumPlot" class="plot"></div>
+            </section>
+
+            <section class="plot-card">
+                <div class="plot-header">
+                    <div class="plot-title">7. Poincaré section</div>
+                    <div class="plot-help">Samples once per forcing period. Useful for nonlinear behavior.</div>
+                </div>
+                <div id="poincarePlot" class="plot"></div>
+            </section>
+        </div>
+
+        <div class="grid-2">
+            <section class="plot-card">
+                <div class="plot-header">
+                    <div class="plot-title">8. Linear amplitude–frequency response</div>
+                    <div class="plot-help">Exact only when α = 0; reference curve when nonlinear stiffness is active.</div>
+                </div>
+                <div id="resonancePlot" class="plot"></div>
+            </section>
+
+            <section class="plot-card advanced-only">
+                <div class="plot-header">
+                    <div class="plot-title">9. Linear force transmissibility</div>
+                    <div class="plot-help">Linear force transmissibility reference: transmitted force ratio versus frequency ratio.</div>
+                </div>
+                <div id="transmissibilityPlot" class="plot"></div>
+            </section>
+        </div>
+
+        <div class="grid-2 advanced-only">
+            <section class="plot-card">
+                <div class="plot-header">
+                    <div class="plot-title">10. Parameter sensitivity</div>
+                    <div class="plot-help">Shows how amplitude changes when m, c, or k changes by ±20%.</div>
+                </div>
+                <div id="sensitivityPlot" class="plot"></div>
+            </section>
+
+            <section class="plot-card">
+                <div class="plot-header">
+                    <div class="plot-title">11. Damping comparison</div>
+                    <div class="plot-help">Compares resonance curves for lower, current, and higher damping.</div>
+                </div>
+                <div id="dampingComparisonPlot", "bifurcationPlot" class="plot"></div>
+            </section>
+        </div>
+
+        <section class="plot-card advanced-only">
+            <div class="plot-header">
+                <div class="plot-title">12. Bifurcation diagram</div>
+                <div class="plot-help">Samples displacement once per forcing period while sweeping excitation frequency. Useful for nonlinear Duffing-type behavior.</div>
+            </div>
+            <div id="bifurcationPlot" class="plot-large"></div>
+        </section>
+
+        <section class="card" id="exportSection">
+            <h2>Export / copy current setup</h2>
+            <p class="small-note">
+                Copy the current parameter set for a report, GitHub README, or to reproduce the same simulation later.
+                To download one plot with full axes, labels, title, and legend, use the camera icon on the plot toolbar. Use the PNG ZIP buttons below for journal-ready exports. For publication-style output, use “Download journal-ready PNG plots”; it exports vector PNG figures with Times New Roman, monochrome line styles, full axes, labels, legends, and white background.
+            </p>
+            <div class="journal-note">
+                Journal export follows the MATLAB-style settings: white background, Times New Roman, 2 pt line width, 1 pt axes, boxed axes, outward ticks, top layer, light major/minor grids, and legend box off. Export font sizes are enlarged for high-resolution PNG/PNG so the saved figures look readable like journal figures. 
+                Use the PNG ZIP buttons to save all visible publication-style figures with one click. PNG is the only plot-export format in this version. The saved images use one shared export-only MATLAB-like publication style so every figure has consistent fonts, line widths, axes, and formatting. Single-column PNG uses 3.5 × 2.6 in at 600 dpi (2100 × 1560 px). Double-column PNG uses 7.2 × 5.0 in at 600 dpi (4320 × 3000 px). Single, double, ZIP, and individual plot exports use the same plotting parameters; only the canvas size changes. Export style: title 42 px, axis labels 40 px, tick labels 34 px, legend 32 px, line width 3.6 px. All exported PNG figures use the same professional MATLAB-like settings: Times New Roman, MATLAB color order, balanced readable fonts, MATLAB-style line widths, boxed axes, outward ticks, light major/minor grids, compact legends, balanced margins, and white background. One save button creates one ZIP file containing all visible plots. All plot-export buttons save PNG files only.
+            </div>
+            <div class="copy-box">
+                <textarea id="parameterText" readonly></textarea>
+                <div class="action-row">
+                    <button class="primary" onclick="copyParameters()">Copy parameters</button>
+                    <button onclick="downloadCSV()">Download response CSV</button>
+                    <button class="primary" onclick="downloadAllVisibleJournalPNG('single')">Save all plots as PNG ZIP — single-column</button>
+                    <button onclick="downloadAllVisibleJournalPNG('double')">Save all plots as PNG ZIP — double-column (same style)</button>
+
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script>
+let learningMode = "beginner";
+let latestFullResult = null;
+let latestWindowedResult = null;
+let latestParams = null;
+let suggestedAction = "increaseDamping";
+
+const plotConfig = {
+    responsive: true,
+    displaylogo: false,
+    displayModeBar: true,
+    modeBarButtonsToRemove: ["select2d", "lasso2d", "toImage"],
+    toImageButtonOptions: {
+        format: "png",
+        filename: "vibrationlab_png_full_axes",
+        height: 1560,
+        width: 2100,
+        scale: 1
+    }
+};
+
+function el(id) { return document.getElementById(id); }
+function getValue(id) { return parseFloat(el(id).value); }
+function setValue(id, value) { el(id).value = value; }
+
+function scrollToSection(id) {
+    const target = el(id);
+    const main = document.querySelector(".main");
+    if (!target) return;
+
+    const appIsTwoColumn = window.matchMedia("(min-width: 1201px)").matches;
+    if (appIsTwoColumn && main) {
+        const top = target.offsetTop - main.offsetTop - 12;
+        main.scrollTo({top, behavior: "smooth"});
+    } else {
+        target.scrollIntoView({behavior: "smooth", block: "start"});
+    }
+}
+
+function setLearningMode(mode) {
+    learningMode = mode;
+    el("beginnerModeBtn").classList.toggle("active", mode === "beginner");
+    el("advancedModeBtn").classList.toggle("active", mode === "advanced");
+
+    document.querySelectorAll(".advanced-only").forEach(node => {
+        node.classList.toggle("hidden", mode !== "advanced");
+    });
+
+    update();
+    addIndividualPlotSaveButtons();
+    setTimeout(resizeAllPlots, 80);
+}
+
+
+function addIndividualPlotSaveButtons() {
+    const plotMap = [
+        ["timePlot", "journal_time_response"],
+        ["accelPlot", "journal_acceleration_response"],
+        ["forcePlot", "journal_force_balance"],
+        ["phasePlot", "journal_phase_portrait"],
+        ["energyPlot", "journal_energy_exchange"],
+        ["spectrumPlot", "journal_displacement_spectrum"],
+        ["poincarePlot", "journal_poincare_section"],
+        ["resonancePlot", "journal_linear_frequency_response"],
+        ["transmissibilityPlot", "journal_force_transmissibility"],
+        ["sensitivityPlot", "journal_parameter_sensitivity"],
+        ["dampingComparisonPlot", "journal_damping_comparison"],
+        ["bifurcationPlot", "journal_bifurcation_diagram"]
+    ];
+
+    plotMap.forEach(([plotId, fileName]) => {
+        const plotNode = el(plotId);
+        if (!plotNode) return;
+
+        const card = plotNode.closest(".plot-card");
+        if (!card) return;
+
+        const header = card.querySelector(".plot-header");
+        if (!header || header.querySelector(`[data-save-plot="${plotId}"]`)) return;
+
+        const help = header.querySelector(".plot-help") || header;
+
+        const actions = document.createElement("div");
+        actions.className = "plot-actions";
+        actions.innerHTML = `
+            <button class="plot-save-btn" data-save-plot="${plotId}" data-file-name="${fileName}" data-width-mode="single">
+                Save PNG single
+            </button>
+            <button class="plot-save-btn" data-save-plot="${plotId}" data-file-name="${fileName}" data-width-mode="double">
+                Save PNG double
+            </button>
+        `;
+
+        help.appendChild(actions);
+    });
+
+    document.querySelectorAll("[data-save-plot]").forEach(btn => {
+        if (btn.dataset.bound === "true") return;
+        btn.dataset.bound = "true";
+        btn.addEventListener("click", async () => {
+            const plotId = btn.dataset.savePlot;
+            const fileName = btn.dataset.fileName;
+            const widthMode = btn.dataset.widthMode || "single";
+
+            const oldText = btn.textContent;
+            btn.textContent = "Saving...";
+            btn.disabled = true;
+
+            await downloadSingleJournalPlotPNG(plotId, fileName, widthMode);
+
+            btn.textContent = oldText;
+            btn.disabled = false;
+        });
+    });
+}
+
+function resizeAllPlots() {
+    [
+        "timePlot", "accelPlot", "forcePlot", "phasePlot", "energyPlot",
+        "spectrumPlot", "poincarePlot", "resonancePlot", "transmissibilityPlot",
+        "sensitivityPlot", "dampingComparisonPlot"
+    ].forEach(id => {
+        const node = el(id);
+        if (node) Plotly.Plots.resize(node);
+    });
+}
+
+window.addEventListener("resize", () => {
+    clearTimeout(window.__resizeTimer);
+    window.__resizeTimer = setTimeout(resizeAllPlots, 120);
+});
+
+function setTab(tabName) {
+    document.querySelectorAll(".tab-button").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.tab === tabName);
+    });
+    document.querySelectorAll(".tab-content").forEach(tab => {
+        tab.classList.toggle("active", tab.id === tabName);
+    });
+}
+
+document.querySelectorAll(".tab-button").forEach(btn => {
+    btn.addEventListener("click", () => setTab(btn.dataset.tab));
+});
+
+function applyPreset(name) {
+    if (name === "free") {
+        setValue("m", 1); setValue("c", 0.25); setValue("k", 20); setValue("alpha", 0);
+        setValue("F0", 0); setValue("omega", 4.4); setValue("x0", 1); setValue("v0", 0);
+        setValue("tEnd", 55); el("windowMode").value = "full";
+    }
+    if (name === "resonance") {
+        setValue("m", 1); setValue("c", 0.15); setValue("k", 20); setValue("alpha", 0);
+        setValue("F0", 1); setValue("omega", 4.4); setValue("x0", 0); setValue("v0", 0);
+        setValue("tEnd", 80); el("windowMode").value = "full";
+    }
+    if (name === "highDamping") {
+        setValue("m", 1); setValue("c", 1.5); setValue("k", 20); setValue("alpha", 0);
+        setValue("F0", 1); setValue("omega", 4.4); setValue("x0", 0); setValue("v0", 0);
+        setValue("tEnd", 60); el("windowMode").value = "full";
+    }
+    if (name === "hardening") {
+        setValue("m", 1); setValue("c", 0.18); setValue("k", 20); setValue("alpha", 300);
+        setValue("F0", 4); setValue("omega", 5.0); setValue("x0", 0); setValue("v0", 0);
+        setValue("tEnd", 100); el("windowMode").value = "steady";
+    }
+    if (name === "softening") {
+        setValue("m", 1); setValue("c", 0.25); setValue("k", 25); setValue("alpha", -60);
+        setValue("F0", 1.5); setValue("omega", 4.3); setValue("x0", 0.1); setValue("v0", 0);
+        setValue("tEnd", 100); el("windowMode").value = "steady";
+    }
+    if (name === "beating") {
+        setValue("m", 1); setValue("c", 0.03); setValue("k", 20); setValue("alpha", 0);
+        setValue("F0", 0.45); setValue("omega", 4.1); setValue("x0", 0); setValue("v0", 0);
+        setValue("tEnd", 160); el("windowMode").value = "full";
+    }
+    update();
+}
+
+function runSuggestedExperiment() {
+    if (suggestedAction === "increaseDamping") {
+        setValue("c", Math.min(5, Math.max(getValue("c") * 2.5, 0.8)));
+    } else if (suggestedAction === "nearResonance") {
+        const p = readParams();
+        const omegaN = Math.sqrt(p.k / p.m);
+        setValue("omega", Math.min(25, Math.max(0.1, omegaN)));
+        setValue("F0", Math.max(p.F0, 1));
+    } else if (suggestedAction === "freeVibration") {
+        setValue("F0", 0);
+        setValue("x0", 1);
+        setValue("v0", 0);
+        el("windowMode").value = "full";
+    } else if (suggestedAction === "hardening") {
+        setValue("alpha", 300);
+        setValue("F0", Math.max(getValue("F0"), 3));
+        el("windowMode").value = "steady";
+    } else if (suggestedAction === "softeningSafe") {
+        setValue("alpha", -50);
+        setValue("F0", Math.min(Math.max(getValue("F0"), 1), 2));
+        setValue("c", Math.max(getValue("c"), 0.25));
+        el("windowMode").value = "steady";
+    }
+    update();
+}
+
+function readParams() {
+    return {
+        m: getValue("m"),
+        c: getValue("c"),
+        k: getValue("k"),
+        alpha: getValue("alpha"),
+        F0: getValue("F0"),
+        omega: getValue("omega"),
+        x0: getValue("x0"),
+        v0: getValue("v0"),
+        tEnd: getValue("tEnd")
+    };
+}
+
+function derivatives(t, state, p) {
+    const x = state[0], v = state[1];
+    const force = p.F0 * Math.sin(p.omega * t);
+    return [
+        v,
+        (force - p.c * v - p.k * x - p.alpha * Math.pow(x, 3)) / p.m
+    ];
+}
+
+function rk4Step(t, state, dt, p) {
+    const k1 = derivatives(t, state, p);
+    const s2 = [state[0] + 0.5 * dt * k1[0], state[1] + 0.5 * dt * k1[1]];
+    const k2 = derivatives(t + 0.5 * dt, s2, p);
+    const s3 = [state[0] + 0.5 * dt * k2[0], state[1] + 0.5 * dt * k2[1]];
+    const k3 = derivatives(t + 0.5 * dt, s3, p);
+    const s4 = [state[0] + dt * k3[0], state[1] + dt * k3[1]];
+    const k4 = derivatives(t + dt, s4, p);
+    return [
+        state[0] + dt / 6 * (k1[0] + 2*k2[0] + 2*k3[0] + k4[0]),
+        state[1] + dt / 6 * (k1[1] + 2*k2[1] + 2*k3[1] + k4[1])
+    ];
+}
+
+function simulate(p) {
+    const density = el("plotDensity").value;
+
+    // Numerical integration is fixed-step RK4.
+    // Choose the number of points from the fastest relevant frequency,
+    // with a cap so the browser stays responsive.
+    const omegaNLocal = Math.sqrt(p.k / p.m);
+    const fastestOmega = Math.max(omegaNLocal, p.omega, 1.0);
+    const fastestPeriod = 2 * Math.PI / fastestOmega;
+    const pointsPerPeriod = density === "high" ? 80 : 50;
+    const targetDt = Math.min(0.02, fastestPeriod / pointsPerPeriod);
+    const minPoints = density === "high" ? 7600 : 4800;
+    const maxPoints = density === "high" ? 36000 : 18000;
+    const nUncapped = Math.ceil(p.tEnd / targetDt) + 1;
+    const n = Math.min(maxPoints, Math.max(minPoints, nUncapped));
+    const dt = p.tEnd / (n - 1);
+
+    p.__actualDt = dt;
+    p.__points = n;
+    p.__pointsPerFastestPeriod = fastestPeriod / dt;
+    p.__timeStepCapped = nUncapped > maxPoints;
+
+    const out = {
+        t: [], x: [], v: [], a: [],
+        force: [], springForce: [], dampingForce: [], inertiaForce: [],
+        kineticEnergy: [], potentialEnergy: [], nonlinearEnergy: [], totalEnergy: [],
+        inputPower: [], dissipatedPower: [], dt, unstable: false
+    };
+
+    let state = [p.x0, p.v0];
+
+    for (let i = 0; i < n; i++) {
+        const ti = i * dt;
+        const xi = state[0], vi = state[1];
+        const Fi = p.F0 * Math.sin(p.omega * ti);
+        const spring = p.k * xi + p.alpha * Math.pow(xi, 3);
+        const damp = p.c * vi;
+        const ai = (Fi - damp - spring) / p.m;
+        const inertia = p.m * ai;
+
+        const ke = 0.5 * p.m * vi * vi;
+        const pe = 0.5 * p.k * xi * xi;
+        const ne = 0.25 * p.alpha * Math.pow(xi, 4);
+        const te = ke + pe + ne;
+
+        out.t.push(ti);
+        out.x.push(xi);
+        out.v.push(vi);
+        out.a.push(ai);
+        out.force.push(Fi);
+        out.springForce.push(spring);
+        out.dampingForce.push(damp);
+        out.inertiaForce.push(inertia);
+        out.kineticEnergy.push(ke);
+        out.potentialEnergy.push(pe);
+        out.nonlinearEnergy.push(ne);
+        out.totalEnergy.push(te);
+        out.inputPower.push(Fi * vi);
+        out.dissipatedPower.push(p.c * vi * vi);
+
+        state = rk4Step(ti, state, dt, p);
+
+        if (!isFinite(state[0]) || !isFinite(state[1]) || Math.abs(state[0]) > 1e6) {
+            out.unstable = true;
+            break;
+        }
+    }
+    return out;
+}
+
+function sliceWindow(result, mode) {
+    const N = result.t.length;
+    let start = 0, end = N;
+    if (mode === "steady") start = Math.floor(N * 0.6);
+    if (mode === "transient") end = Math.floor(N * 0.4);
+    const out = {};
+    for (let key in result) {
+        if (Array.isArray(result[key])) out[key] = result[key].slice(start, end);
+        else out[key] = result[key];
+    }
+    return out;
+}
+
+function mean(arr) { return arr.length ? arr.reduce((s,x)=>s+x,0)/arr.length : 0; }
+function rms(arr) { return arr.length ? Math.sqrt(mean(arr.map(x=>x*x))) : 0; }
+function maxAbs(arr) { return arr.length ? Math.max(...arr.map(x=>Math.abs(x))) : 0; }
+function minVal(arr) { return arr.length ? Math.min(...arr) : 0; }
+function maxVal(arr) { return arr.length ? Math.max(...arr) : 0; }
+
+function linearAmplitude(p, omega) {
+    return p.F0 / Math.sqrt(Math.pow(p.k - p.m*omega*omega, 2) + Math.pow(p.c*omega, 2));
+}
+
+function phaseLag(p, omega) {
+    return Math.atan2(p.c * omega, p.k - p.m * omega * omega);
+}
+
+function zeroCrossingFrequency(t, x) {
+    const crossings = [];
+    for (let i = 1; i < x.length; i++) {
+        if ((x[i-1] <= 0 && x[i] > 0) || (x[i-1] >= 0 && x[i] < 0)) crossings.push(t[i]);
+    }
+    if (crossings.length < 4) return null;
+    const periods = [];
+    for (let i = 2; i < crossings.length; i++) periods.push(crossings[i] - crossings[i-2]);
+    return 1 / mean(periods);
+}
+
+function logDecrementEstimate(t, x) {
+    let peaks = [];
+    for (let i = 1; i < x.length - 1; i++) {
+        if (x[i] > x[i-1] && x[i] > x[i+1] && Math.abs(x[i]) > 1e-6) {
+            peaks.push({t: t[i], x: Math.abs(x[i])});
+        }
+    }
+    if (peaks.length < 4) return null;
+    let deltas = [];
+    for (let i = 0; i < Math.min(peaks.length - 1, 8); i++) {
+        if (peaks[i+1].x > 0 && peaks[i].x > peaks[i+1].x) deltas.push(Math.log(peaks[i].x / peaks[i+1].x));
+    }
+    if (deltas.length < 2) return null;
+    const delta = mean(deltas);
+    const zeta = delta / Math.sqrt(4*Math.PI*Math.PI + delta*delta);
+    return {delta, zeta};
+}
+
+function computeSimpleSpectrum(t, x) {
+    const Nraw = x.length;
+    const N = Math.min(1500, Nraw);
+    const start = Math.max(0, Nraw - N);
+    const xs = x.slice(start);
+    const ts = t.slice(start);
+    const dt = ts.length > 1 ? ts[1] - ts[0] : 0.01;
+    const avg = mean(xs);
+    const windowed = xs.map((val, i) => {
+        const w = 0.5 * (1 - Math.cos(2 * Math.PI * i / Math.max(1, N - 1)));
+        return (val - avg) * w;
+    });
+    const maxFreqHz = Math.min(12, 0.5 / dt);
+    const bins = 320;
+    let freq = [], amp = [];
+    for (let b = 1; b < bins; b++) {
+        const f = b * maxFreqHz / (bins - 1);
+        let re = 0, im = 0;
+        for (let n = 0; n < N; n++) {
+            const angle = -2 * Math.PI * f * n * dt;
+            re += windowed[n] * Math.cos(angle);
+            im += windowed[n] * Math.sin(angle);
+        }
+        freq.push(f);
+        amp.push(2 * Math.sqrt(re*re + im*im) / N);
+    }
+    return {freq, amp};
+}
+
+function dominantSpectrum(spec) {
+    if (!spec.amp.length) return null;
+    let idx = 0;
+    for (let i = 1; i < spec.amp.length; i++) if (spec.amp[i] > spec.amp[idx]) idx = i;
+    return {freq: spec.freq[idx], amp: spec.amp[idx]};
+}
+
+function poincareSection(t, x, v, omega) {
+    const T = 2 * Math.PI / omega;
+    let px = [], pv = [];
+    if (!isFinite(T) || T <= 0) return {px, pv};
+    const tStart = t[Math.floor(t.length * 0.4)];
+    const tEnd = t[t.length - 1];
+    let idx = 1;
+    for (let tau = tStart; tau <= tEnd; tau += T) {
+        while (idx < t.length - 1 && t[idx] < tau) idx++;
+        if (idx <= 0 || idx >= t.length) continue;
+        const t0 = t[idx - 1], t1 = t[idx];
+        const w = (tau - t0) / (t1 - t0);
+        px.push(x[idx - 1] * (1 - w) + x[idx] * w);
+        pv.push(v[idx - 1] * (1 - w) + v[idx] * w);
+    }
+    return {px, pv};
+}
+
+function fmt(x, digits=3) {
+    if (x === null || x === undefined || Number.isNaN(x)) return "N/A";
+    if (!isFinite(x)) return "∞";
+    if ((Math.abs(x) >= 1000 || (Math.abs(x) < 0.001 && x !== 0))) return x.toExponential(digits);
+    return x.toFixed(digits);
+}
+
+function update() {
+    const p = readParams();
+    latestParams = p;
+
+    ["m","c","k","alpha","F0","omega","x0","v0"].forEach(id => {
+        const digits = (id === "k" || id === "alpha" || id === "F0") ? 1 : 2;
+        el(id+"Val").textContent = getValue(id).toFixed(digits);
+    });
+    el("tEndVal").textContent = p.tEnd.toFixed(0) + " s";
+
+    const mode = el("windowMode").value;
+    const omegaN = Math.sqrt(p.k / p.m);
+    const fn = omegaN / (2*Math.PI);
+    const zeta = p.c / (2*Math.sqrt(p.k*p.m));
+    const omegaD = zeta < 1 ? omegaN*Math.sqrt(1-zeta*zeta) : null;
+    const ratio = p.omega / omegaN;
+    const Q = zeta > 0 ? 1/(2*zeta) : Infinity;
+    const critC = 2*Math.sqrt(p.k*p.m);
+    const ampLinear = linearAmplitude(p, p.omega);
+    const lagDeg = phaseLag(p, p.omega) * 180 / Math.PI;
+    const dampingType = zeta < 1 ? "Underdamped" : Math.abs(zeta - 1) < 0.03 ? "Critical" : "Overdamped";
+    const rPeak = zeta < Math.sqrt(0.5) ? Math.sqrt(1 - 2*zeta*zeta) : null;
+    const omegaPeak = rPeak ? rPeak * omegaN : null;
+
+    let risk = "Low resonance risk", riskClass = "low";
+    if (Math.abs(ratio - 1) < 0.05 && zeta < 0.15 && p.F0 > 0) { risk = "High resonance risk"; riskClass = "high"; }
+    else if ((Math.abs(ratio - 1) < 0.15 && p.F0 > 0) || zeta < 0.03) { risk = "Medium resonance risk"; riskClass = "medium"; }
+    if (p.F0 === 0) { risk = "Free vibration"; riskClass = "neutral"; }
+
+    const nonlinType = p.alpha > 0 ? "Hardening" : p.alpha < 0 ? "Softening" : "Linear";
+
+    el("statusBadge").className = "status-badge " + riskClass;
+    el("statusBadge").textContent = risk;
+
+    el("infoGrid").innerHTML = `
+        <div class="info-item"><div class="name">ωₙ</div><div class="value">${fmt(omegaN)} rad/s</div></div>
+        <div class="info-item"><div class="name">fₙ</div><div class="value">${fmt(fn)} Hz</div></div>
+        <div class="info-item"><div class="name">ζ</div><div class="value">${fmt(zeta,4)}</div></div>
+        <div class="info-item"><div class="name">ω/ωₙ</div><div class="value">${fmt(ratio)}</div></div>
+        <div class="info-item"><div class="name">Q factor</div><div class="value">${fmt(Q,2)}</div></div>
+        <div class="info-item"><div class="name">Type</div><div class="value">${nonlinType}</div></div>
+        <div class="info-item"><div class="name">RK4 points</div><div class="value">${p.__points}</div></div>
+        <div class="info-item"><div class="name">Pts / fastest period</div><div class="value">${fmt(p.__pointsPerFastestPeriod,1)}</div></div>
+    `;
+
+    let warning = "";
+    let warningClass = "neutral";
+    if (p.__pointsPerFastestPeriod < 20) {
+        warning = "Numerical accuracy warning: the time step is relatively coarse for the fastest oscillation. Use High plot density or reduce simulation time.";
+        warningClass = "medium";
+    } else if (p.alpha < 0 && (Math.abs(p.x0) > 1 || p.F0 > 5)) {
+        warning = "Softening stiffness with large displacement or force can become unstable. Reduce |α|, F₀, or initial displacement if the response diverges.";
+        warningClass = "high";
+    } else if (p.c === 0 && Math.abs(ratio - 1) < 0.03 && p.F0 > 0) {
+        warning = "Undamped forcing close to resonance can grow very large. Add damping or move away from ω ≈ ωₙ.";
+        warningClass = "high";
+    } else if (zeta < 0.01) {
+        warning = "Very low damping. Expect slow transient decay and a very sharp resonance peak.";
+        warningClass = "medium";
+    } else if (p.F0 === 0 && Math.abs(p.x0) < 1e-12 && Math.abs(p.v0) < 1e-12) {
+        warning = "There is no force and no initial motion, so the system will remain still.";
+        warningClass = "medium";
+    } else {
+        warning = "Looks good. Try moving ω closer to ωₙ or increasing damping to see the difference clearly.";
+    }
+    el("warningBox").className = "alert " + warningClass;
+    el("warningBox").textContent = warning;
+
+    latestFullResult = simulate(p);
+    latestWindowedResult = sliceWindow(latestFullResult, mode);
+    const result = latestWindowedResult;
+
+    const spec = computeSimpleSpectrum(result.t, result.x);
+    const dom = dominantSpectrum(spec);
+    const zcFreq = zeroCrossingFrequency(result.t, result.x);
+    const ld = p.F0 === 0 ? logDecrementEstimate(result.t, result.x) : null;
+
+    const xPeak = maxAbs(result.x), vPeak = maxAbs(result.v), aPeak = maxAbs(result.a);
+    const xRms = rms(result.x), vRms = rms(result.v), aRms = rms(result.a);
+    const Emean = mean(result.totalEnergy);
+    const inputPowerMean = mean(result.inputPower);
+    const dissipatedPowerMean = mean(result.dissipatedPower);
+    const xmin = minVal(result.x), xmax = maxVal(result.x);
+
+    el("metrics").innerHTML = `
+        <div class="metric"><div class="name">Peak displacement</div><div class="value">${fmt(xPeak)} m</div><div class="note">maximum |x|</div></div>
+        <div class="metric"><div class="name">RMS displacement</div><div class="value">${fmt(xRms)} m</div><div class="note">vibration severity</div></div>
+        <div class="metric"><div class="name">Peak velocity</div><div class="value">${fmt(vPeak)} m/s</div><div class="note">maximum |v|</div></div>
+        <div class="metric"><div class="name">Peak acceleration</div><div class="value">${fmt(aPeak)} m/s²</div><div class="note">maximum |a|</div></div>
+        <div class="metric"><div class="name">Mean energy</div><div class="value">${fmt(Emean)} J</div><div class="note">selected window</div></div>
+        <div class="metric"><div class="name">Input power</div><div class="value">${fmt(inputPowerMean)} W</div><div class="note">mean F(t)v(t)</div></div>
+        <div class="metric"><div class="name">Dissipated power</div><div class="value">${fmt(dissipatedPowerMean)} W</div><div class="note">mean cv²</div></div>
+        <div class="metric"><div class="name">Dominant tone</div><div class="value">${dom ? fmt(dom.freq) + " Hz" : "N/A"}</div><div class="note">from spectrum</div></div>
+        <div class="metric"><div class="name">Response frequency</div><div class="value">${zcFreq ? fmt(zcFreq) + " Hz" : "N/A"}</div><div class="note">zero crossing</div></div>
+        <div class="metric"><div class="name">Displacement range</div><div class="value">${fmt(xmin)} to ${fmt(xmax)}</div><div class="note">min to max</div></div>
+        <div class="metric"><div class="name">Phase lag</div><div class="value">${fmt(lagDeg,1)}°</div><div class="note">linear reference</div></div>
+        <div class="metric"><div class="name">Free-decay ζ estimate</div><div class="value">${ld ? fmt(ld.zeta,4) : "N/A"}</div><div class="note">free vibration only</div></div>
+    `;
+
+    let analysis = "";
+    if (learningMode === "beginner") {
+        analysis += `This is a ${dampingType.toLowerCase()} ${nonlinType.toLowerCase()} vibration system. `;
+        if (p.F0 === 0) {
+            analysis += `Because the external force is zero, the motion comes only from the initial displacement or velocity. Damping gradually removes energy from the system. `;
+        } else {
+            analysis += `The force is shaking the system at ω = ${fmt(p.omega)} rad/s. The natural frequency is ωₙ = ${fmt(omegaN)} rad/s. `;
+            if (Math.abs(ratio - 1) < 0.08) analysis += `These two frequencies are very close, so resonance amplification is expected. `;
+            else if (ratio < 1) analysis += `The excitation is below the natural frequency, so the response is not at the strongest resonance point. `;
+            else analysis += `The excitation is above the natural frequency, where inertia becomes more important. `;
+        }
+        if (p.alpha > 0) analysis += `The nonlinear term is positive, so the spring becomes stiffer at larger displacement. `;
+        if (p.alpha < 0) analysis += `The nonlinear term is negative, so the spring becomes softer at larger displacement. `;
+        analysis += `The most important plots to read first are the time response, phase portrait, energy plot, and resonance curve.`;
+    } else {
+        analysis += `The system has ζ = ${fmt(zeta,4)}, Q = ${fmt(Q,2)}, r = ω/ωₙ = ${fmt(ratio)}, and a linear phase lag of ${fmt(lagDeg,1)}°. `;
+        analysis += `The selected-frequency linear amplitude is ${fmt(ampLinear)} m. `;
+        if (omegaPeak) analysis += `The linear damped resonance peak occurs near ω ≈ ${fmt(omegaPeak)} rad/s. `;
+        analysis += `The mean input power is ${fmt(inputPowerMean)} W and the mean dissipated power is ${fmt(dissipatedPowerMean)} W over the selected window. `;
+        if (dom) analysis += `The dominant spectral tone is ${fmt(dom.freq)} Hz. `;
+        if (p.alpha !== 0) analysis += `Because α ≠ 0, the analytical frequency-response curve should be treated as a reference rather than the exact nonlinear response.`;
+    }
+    el("analysisText").textContent = analysis;
+
+    let suggestion = "";
+    if (p.F0 === 0) {
+        suggestedAction = "nearResonance";
+        suggestion = "Turn this into a forced-vibration test: set the excitation frequency close to the natural frequency and add force. This will show resonance clearly.";
+    } else if (Math.abs(ratio - 1) < 0.08 && zeta < 0.12) {
+        suggestedAction = "increaseDamping";
+        suggestion = "Increase damping and watch how the peak response decreases. This is the easiest way to understand resonance control.";
+    } else if (p.alpha === 0) {
+        suggestedAction = "hardening";
+        suggestion = "Try hardening nonlinear stiffness. You will see the time response, spectrum, and phase portrait change compared with the linear case.";
+    } else if (p.alpha > 0) {
+        suggestedAction = "softeningSafe";
+        suggestion = "Now compare with a safe softening case. It should show how negative α changes the effective stiffness.";
+    } else {
+        suggestedAction = "freeVibration";
+        suggestion = "Return to free vibration and compare numerical decay with the damping ratio and damped natural frequency.";
+    }
+    el("suggestionText").textContent = suggestion;
+
+    const pills = [
+        `${dampingType}`,
+        `${nonlinType} stiffness`,
+        `ω/ωₙ = ${fmt(ratio)}`,
+        `ζ = ${fmt(zeta,4)}`,
+        `Q = ${fmt(Q,2)}`,
+        `x RMS = ${fmt(xRms)} m`
+    ];
+    el("pillRow").innerHTML = pills.map(pill => `<span class="pill">${pill}</span>`).join("");
+
+    el("parameterText").value = JSON.stringify({
+        equation: "m*x_ddot + c*x_dot + k*x + alpha*x^3 = F0*sin(omega*t)",
+        parameters: p,
+        derived: {
+            natural_frequency_rad_s: omegaN,
+            natural_frequency_Hz: fn,
+            damping_ratio: zeta,
+            damped_natural_frequency_rad_s: omegaD,
+            frequency_ratio: ratio,
+            critical_damping: critC,
+            q_factor: Q,
+            damping_type: dampingType,
+            stiffness_type: nonlinType,
+            linear_amplitude_at_selected_frequency: ampLinear,
+            linear_phase_lag_deg: lagDeg,
+            integration_time_step_s: p.__actualDt,
+            integration_points: p.__points,
+            points_per_fastest_period: p.__pointsPerFastestPeriod
+        },
+        response_metrics: {
+            peak_displacement: xPeak,
+            rms_displacement: xRms,
+            peak_velocity: vPeak,
+            peak_acceleration: aPeak,
+            mean_total_energy: Emean
+        }
+    }, null, 2);
+
+    drawPlots(p, result, spec, omegaN, fn, zeta, ratio, omegaPeak);
+}
+
+
+
+
+
+// ============================================================
+// Centralized journal PNG export style
+// Every saved PNG uses this same configuration.
+// ============================================================
+
+const journalExportStyle = {
+    fontFamily: "Times New Roman, Times, serif",
+
+    // MATLAB-like journal PNG export fonts.
+    // These are balanced for 600-dpi PNG output.
+    titleFontSize: 42,
+    axisTitleFontSize: 40,
+    tickFontSize: 34,
+    legendFontSize: 32,
+    annotationFontSize: 32,
+
+    // MATLAB-like line and axis settings.
+    dataLineWidth: 3.6,
+    markerSize: 12,
+    markerLineWidth: 1.4,
+    axisLineWidth: 1.8,
+    tickLength: 12,
+    tickWidth: 1.6,
+    majorGridWidth: 0.9,
+    minorGridWidth: 0.55,
+    majorGridColor: "rgba(0,0,0,0.12)",
+    minorGridColor: "rgba(0,0,0,0.06)",
+    zeroLineColor: "rgba(0,0,0,0.22)",
+    zeroLineWidth: 0.9,
+
+    // Balanced margins for labels and compact legends.
+    margins: {l: 240, r: 110, t: 170, b: 190},
+
+    // MATLAB-like title and legend placement.
+    titleY: 0.965,
+    legendY: 0.985,
+
+    // MATLAB default color order.
+    palette: ["#0072BD", "#D95319", "#EDB120", "#7E2F8E", "#77AC30", "#4DBEEE", "#A2142F"],
+    lineStyles: ["solid", "dash", "dot", "dashdot", "longdash", "longdashdot"]
+};
+
+// PNG-only journal export settings.
+// These mimic the user's MATLAB journal style:
+// Times New Roman, white background, 2.0+ line width,
+// boxed axes, outward ticks, light major/minor grids,
+// legend box off, and 600-dpi equivalent pixel dimensions.
+//
+// Single-column: 3.5 x 2.6 in at 600 dpi = 2100 x 1560 px
+// Double-column: 7.2 x 5.0 in at 600 dpi = 4320 x 3000 px
+// IMPORTANT: single and double exports use the SAME fonts, line widths,
+// axes, tick sizes, grids, legend style, and margins. Only canvas size changes.
+const journalFigureSizes = {
+    single: {
+        inches: {w: 3.5, h: 2.6},
+        pixels: {w: 2100, h: 1560}
+    },
+    double: {
+        inches: {w: 7.2, h: 5.0},
+        pixels: {w: 4320, h: 3000}
+    }
+};
+
+function applyJournalTraceStyle(traces) {
+    return traces.map((trace, i) => {
+        const updated = {...trace};
+        const color = journalExportStyle.palette[i % journalExportStyle.palette.length];
+
+        if (updated.type === "bar") {
+            updated.marker = {
+                color: color,
+                opacity: 0.88,
+                line: {
+                    color: "#000000",
+                    width: 0.9
+                },
+                ...(updated.marker || {})
+            };
+            return updated;
+        }
+
+        if (updated.mode && updated.mode.includes("markers")) {
+            updated.marker = {
+                ...(updated.marker || {}),
+                color: color,
+                size: journalExportStyle.markerSize,
+                symbol: "circle",
+                opacity: 0.75,
+                line: {
+                    color: "#000000",
+                    width: journalExportStyle.markerLineWidth
+                }
+            };
+        }
+
+        updated.line = {
+            color: color,
+            width: journalExportStyle.dataLineWidth,
+            dash: journalExportStyle.lineStyles[i % journalExportStyle.lineStyles.length],
+            ...(updated.line || {})
+        };
+
+        return updated;
+    });
+}
+
+function extractAxisTitle(axisObj) {
+    if (!axisObj) return "";
+    if (typeof axisObj.title === "string") return axisObj.title;
+    if (axisObj.title && typeof axisObj.title === "object") return axisObj.title.text || "";
+    return "";
+}
+
+function matlabStyleAxis(axisTitle, extra = {}) {
+    return {
+        title: {
+            text: axisTitle,
+            standoff: 14,
+            font: {
+                family: journalExportStyle.fontFamily,
+                size: journalExportStyle.axisTitleFontSize,
+                color: "#000000"
+            }
+        },
+        tickfont: {
+            family: journalExportStyle.fontFamily,
+            size: journalExportStyle.tickFontSize,
+            color: "#000000"
+        },
+        showline: true,
+        linewidth: journalExportStyle.axisLineWidth,
+        linecolor: "#000000",
+        mirror: true,
+        ticks: "outside",
+        ticklen: journalExportStyle.tickLength,
+        tickwidth: journalExportStyle.tickWidth,
+        tickcolor: "#000000",
+        showgrid: true,
+        gridcolor: journalExportStyle.majorGridColor,
+        gridwidth: journalExportStyle.majorGridWidth,
+        zeroline: true,
+        zerolinecolor: journalExportStyle.zeroLineColor,
+        zerolinewidth: journalExportStyle.zeroLineWidth,
+        minor: {
+            ticks: "outside",
+            showgrid: true,
+            gridcolor: journalExportStyle.minorGridColor,
+            gridwidth: journalExportStyle.minorGridWidth
+        },
+        automargin: true,
+        layer: "above traces",
+        ...extra
+    };
+}
+
+function makeJournalLayoutFromPlot(plotLayout, widthMode = "single") {
+    const size = journalFigureSizes[widthMode] || journalFigureSizes.single;
+
+    const xTitle = extractAxisTitle(plotLayout.xaxis);
+    const yTitle = extractAxisTitle(plotLayout.yaxis);
+
+    const titleText = plotLayout.title && typeof plotLayout.title === "object"
+        ? plotLayout.title.text || ""
+        : (plotLayout.title || "");
+
+    const layout = {
+        width: size.pixels.w,
+        height: size.pixels.h,
+        autosize: false,
+        paper_bgcolor: "#ffffff",
+        plot_bgcolor: "#ffffff",
+
+        // SAME export margins for single and double.
+        // Only canvas width/height changes.
+        margin: {...journalExportStyle.margins},
+
+        font: {
+            family: journalExportStyle.fontFamily,
+            size: journalExportStyle.tickFontSize,
+            color: "#000000"
+        },
+        title: {
+            text: titleText,
+            x: 0.5,
+            xanchor: "center",
+            y: journalExportStyle.titleY,
+            font: {
+                family: journalExportStyle.fontFamily,
+                size: journalExportStyle.titleFontSize,
+                color: "#000000"
+            }
+        },
+        legend: {
+            orientation: "h",
+            x: 0.02,
+            xanchor: "left",
+            y: journalExportStyle.legendY,
+            yanchor: "top",
+            bgcolor: "rgba(255,255,255,0.80)",
+            borderwidth: 0,
+            font: {
+                family: journalExportStyle.fontFamily,
+                size: journalExportStyle.legendFontSize,
+                color: "#000000"
+            },
+            itemsizing: "constant",
+            itemwidth: 38
+        },
+        xaxis: matlabStyleAxis(xTitle, plotLayout.xaxis || {}),
+        yaxis: matlabStyleAxis(yTitle, plotLayout.yaxis || {}),
+        hovermode: false,
+        showlegend: plotLayout.showlegend === false ? false : true
+    };
+
+    // Preserve useful ranges and axis options from the interactive plot.
+    if (plotLayout.xaxis && plotLayout.xaxis.range) layout.xaxis.range = plotLayout.xaxis.range;
+    if (plotLayout.yaxis && plotLayout.yaxis.range) layout.yaxis.range = plotLayout.yaxis.range;
+    if (plotLayout.xaxis && plotLayout.xaxis.rangemode) layout.xaxis.rangemode = plotLayout.xaxis.rangemode;
+    if (plotLayout.yaxis && plotLayout.yaxis.rangemode) layout.yaxis.rangemode = plotLayout.yaxis.rangemode;
+    if (plotLayout.xaxis && plotLayout.xaxis.tickangle) layout.xaxis.tickangle = plotLayout.xaxis.tickangle;
+
+    if (plotLayout.yaxis2) {
+        const y2Title = extractAxisTitle(plotLayout.yaxis2);
+        layout.yaxis2 = {
+            ...matlabStyleAxis(y2Title, plotLayout.yaxis2),
+            overlaying: "y",
+            side: "right",
+            showgrid: false,
+            minor: {showgrid: false},
+            zeroline: false
+        };
+        if (plotLayout.yaxis2.range) layout.yaxis2.range = plotLayout.yaxis2.range;
+    }
+
+    if (plotLayout.shapes) {
+        layout.shapes = plotLayout.shapes.map(s => ({
+            ...s,
+            line: {
+                color: "#000000",
+                width: 1.3,
+                dash: s.line?.dash || "dash"
+            }
+        }));
+    }
+
+    if (plotLayout.annotations) {
+        layout.annotations = plotLayout.annotations.map(a => ({
+            ...a,
+            font: {
+                family: journalExportStyle.fontFamily,
+                size: journalExportStyle.annotationFontSize,
+                color: "#000000"
+            },
+            bgcolor: "rgba(255,255,255,0.85)",
+            bordercolor: "rgba(0,0,0,0)"
+        }));
+    }
+
+    return layout;
+}
+
+function downloadJournalPlotPNG(plotId, filename, widthMode = "single") {
+    const node = el(plotId);
+    if (!node || !node.data || !node.layout) return;
+
+    const size = journalFigureSizes[widthMode] || journalFigureSizes.single;
+    const journalData = applyJournalTraceStyle(node.data);
+    const journalLayout = makeJournalLayoutFromPlot(node.layout, widthMode);
+
+    const temp = document.createElement("div");
+    temp.style.position = "fixed";
+    temp.style.left = "-30000px";
+    temp.style.top = "0";
+    temp.style.width = size.pixels.w + "px";
+    temp.style.height = size.pixels.h + "px";
+    temp.style.background = "#ffffff";
+    document.body.appendChild(temp);
+
+    Plotly.newPlot(temp, journalData, journalLayout, {
+        staticPlot: true,
+        displayModeBar: false,
+        responsive: false
+    }).then(() => {
+        return Plotly.downloadImage(temp, {
+            format: "png",
+            width: size.pixels.w,
+            height: size.pixels.h,
+            scale: 1,
+            filename: filename + "_" + widthMode + "_600dpi"
+        });
+    }).then(() => {
+        Plotly.purge(temp);
+        temp.remove();
+    }).catch((err) => {
+        console.error("PNG export failed for", plotId, err);
+        Plotly.purge(temp);
+        temp.remove();
+    });
+}
+
+function getVisibleJournalPlots() {
+    return [
+        ["timePlot", "journal_time_response"],
+        ["accelPlot", "journal_acceleration_response"],
+        ["forcePlot", "journal_force_balance"],
+        ["phasePlot", "journal_phase_portrait"],
+        ["energyPlot", "journal_energy_exchange"],
+        ["spectrumPlot", "journal_displacement_spectrum"],
+        ["poincarePlot", "journal_poincare_section"],
+        ["resonancePlot", "journal_linear_frequency_response"],
+        ["transmissibilityPlot", "journal_force_transmissibility"],
+        ["sensitivityPlot", "journal_parameter_sensitivity"],
+        ["dampingComparisonPlot", "journal_damping_comparison"],
+        ["bifurcationPlot", "journal_bifurcation_diagram"]
+    ].filter(([id]) => {
+        const node = el(id);
+        return node && node.offsetParent !== null && node.data && node.layout;
+    });
+}
+
+function sanitizeFileName(name) {
+    return String(name)
+        .replace(/[^a-z0-9_\-]+/gi, "_")
+        .replace(/_+/g, "_")
+        .replace(/^_|_$/g, "")
+        .toLowerCase();
+}
+
+async function makeJournalPlotPNGBlob(plotId, widthMode = "single") {
+    const node = el(plotId);
+    if (!node || !node.data || !node.layout) return null;
+
+    const size = journalFigureSizes[widthMode] || journalFigureSizes.single;
+    const journalData = applyJournalTraceStyle(node.data);
+    const journalLayout = makeJournalLayoutFromPlot(node.layout, widthMode);
+
+    const temp = document.createElement("div");
+    temp.style.position = "fixed";
+    temp.style.left = "-40000px";
+    temp.style.top = "0";
+    temp.style.width = size.pixels.w + "px";
+    temp.style.height = size.pixels.h + "px";
+    temp.style.background = "#ffffff";
+    document.body.appendChild(temp);
+
+    try {
+        await Plotly.newPlot(temp, journalData, journalLayout, {
+            staticPlot: true,
+            displayModeBar: false,
+            responsive: false
+        });
+
+        const dataUrl = await Plotly.toImage(temp, {
+            format: "png",
+            width: size.pixels.w,
+            height: size.pixels.h,
+            scale: 1
+        });
+
+        const response = await fetch(dataUrl);
+        const blob = await response.blob();
+
+        Plotly.purge(temp);
+        temp.remove();
+
+        return blob;
+    } catch (err) {
+        console.error("PNG creation failed for", plotId, err);
+        Plotly.purge(temp);
+        temp.remove();
+        return null;
+    }
+}
+
+function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function downloadSingleJournalPlotPNG(plotId, filename, widthMode = "single") {
+    const blob = await makeJournalPlotPNGBlob(plotId, widthMode);
+    if (blob) {
+        downloadBlob(blob, sanitizeFileName(filename + "_" + widthMode + "_600dpi") + ".png");
+    }
+}
+
+async function downloadAllVisibleJournalPNG(widthMode = "single") {
+    const plots = getVisibleJournalPlots();
+    const status = el("exportStatus");
+
+    if (!plots.length) {
+        if (status) status.textContent = "No visible plots found to export.";
+        return;
+    }
+
+    if (typeof JSZip === "undefined") {
+        if (status) status.textContent = "ZIP library is not loaded. Check your internet connection and try again.";
+        return;
+    }
+
+    const zip = new JSZip();
+
+    if (status) {
+        status.textContent = "Preparing 0 / " + plots.length + " PNG plot(s) using the same journal style parameters for every plot...";
+    }
+
+    for (let i = 0; i < plots.length; i++) {
+        const [id, filename] = plots[i];
+
+        if (status) {
+            status.textContent = "Preparing " + (i + 1) + " / " + plots.length + ": " + filename + ".png";
+        }
+
+        const blob = await makeJournalPlotPNGBlob(id, widthMode);
+        if (blob) {
+            zip.file(sanitizeFileName(filename + "_" + widthMode + "_600dpi") + ".png", blob);
+        }
+    }
+
+    if (status) {
+        status.textContent = "Creating ZIP file...";
+    }
+
+    const zipBlob = await zip.generateAsync({type: "blob"});
+
+    downloadBlob(zipBlob, "vibrationlab_professional_matlab_png_" + widthMode + "_all_plots.zip");
+
+    if (status) {
+        status.textContent = "Done. Saved all visible plots as one PNG ZIP file.";
+    }
+}
+
+
+
+function professionalLayout(base, custom = {}) {
+    const merged = {...base, ...custom};
+
+    // Export-safe layout:
+    // Plotly's camera button exports only what is inside the Plotly canvas.
+    // Therefore titles, axis labels, and legends must be inside the Plotly layout,
+    // not only in the surrounding HTML card.
+    merged.margin = custom.margin || base.margin || {l: 95, r: 80, t: 90, b: 135};
+    merged.title = custom.title || merged.title || undefined;
+
+    if (merged.title && typeof merged.title === "object") {
+        merged.title = {
+            font: {size: 20},
+            y: 0.97,
+            ...(merged.title || {})
+        };
+    }
+
+    merged.uniformtext = {mode: "show", minsize: 10};
+
+    merged.xaxis = {...(base.xaxis || {}), ...(custom.xaxis || {})};
+    merged.yaxis = {...(base.yaxis || {}), ...(custom.yaxis || {})};
+
+    if (typeof merged.xaxis.title === "string") {
+        merged.xaxis.title = {text: merged.xaxis.title, standoff: 18};
+    } else if (merged.xaxis.title && typeof merged.xaxis.title === "object") {
+        merged.xaxis.title = {standoff: 18, ...merged.xaxis.title};
+    }
+
+    if (typeof merged.yaxis.title === "string") {
+        merged.yaxis.title = {text: merged.yaxis.title, standoff: 20};
+    } else if (merged.yaxis.title && typeof merged.yaxis.title === "object") {
+        merged.yaxis.title = {standoff: 20, ...merged.yaxis.title};
+    }
+
+    merged.xaxis.automargin = true;
+    merged.yaxis.automargin = true;
+
+    if (custom.yaxis2) {
+        merged.yaxis2 = {
+            showgrid: false,
+            zeroline: false,
+            linecolor: "#000000",
+            mirror: true,
+            ticks: "outside",
+            automargin: true,
+            ...(custom.yaxis2 || {})
+        };
+    }
+
+    if (merged.yaxis2) {
+        if (typeof merged.yaxis2.title === "string") {
+            merged.yaxis2.title = {text: merged.yaxis2.title, standoff: 20};
+        } else if (merged.yaxis2.title && typeof merged.yaxis2.title === "object") {
+            merged.yaxis2.title = {standoff: 20, ...merged.yaxis2.title};
+        }
+        merged.yaxis2.automargin = true;
+    }
+
+    return merged;
+}
+
+function cleanRange(arr, pad = 0.08) {
+    if (!arr || !arr.length) return undefined;
+    let finite = arr.filter(v => Number.isFinite(v));
+    if (!finite.length) return undefined;
+    let mn = Math.min(...finite);
+    let mx = Math.max(...finite);
+    if (mn === mx) {
+        const d = Math.abs(mx) > 1e-12 ? Math.abs(mx) * 0.2 : 1;
+        return [mn - d, mx + d];
+    }
+    const d = (mx - mn) * pad;
+    return [mn - d, mx + d];
+}
+
+
+function styleVisibleTraces(traces) {
+    const colors = ["#1f77b4", "#d62728", "#2ca02c", "#9467bd", "#ff7f0e", "#111827"];
+    const dashes = ["solid", "dash", "dot", "dashdot", "longdash", "solid"];
+    return traces.map((trace, i) => {
+        const updated = {...trace};
+        if (updated.type === "bar") {
+            updated.marker = {
+                color: colors[i % colors.length],
+                line: {color: "#111827", width: 0.8},
+                ...(updated.marker || {})
+            };
+            return updated;
+        }
+        if (updated.mode && updated.mode.includes("markers")) {
+            updated.marker = {
+                color: colors[i % colors.length],
+                size: 7,
+                line: {color: "#111827", width: 0.7},
+                ...(updated.marker || {})
+            };
+        }
+        updated.line = {
+            color: colors[i % colors.length],
+            width: 2.1,
+            dash: dashes[i % dashes.length],
+            ...(updated.line || {})
+        };
+        return updated;
+    });
+}
+
+
+function rk4StepForParams(t, state, dt, pLocal) {
+    const x = state[0], v = state[1];
+    const force1 = pLocal.F0 * Math.sin(pLocal.omega * t);
+    const f = (tt, ss) => {
+        const xx = ss[0], vv = ss[1];
+        const ff = pLocal.F0 * Math.sin(pLocal.omega * tt);
+        return [
+            vv,
+            (ff - pLocal.c * vv - pLocal.k * xx - pLocal.alpha * Math.pow(xx, 3)) / pLocal.m
+        ];
+    };
+
+    const k1 = f(t, state);
+    const s2 = [state[0] + 0.5 * dt * k1[0], state[1] + 0.5 * dt * k1[1]];
+    const k2 = f(t + 0.5 * dt, s2);
+    const s3 = [state[0] + 0.5 * dt * k2[0], state[1] + 0.5 * dt * k2[1]];
+    const k3 = f(t + 0.5 * dt, s3);
+    const s4 = [state[0] + dt * k3[0], state[1] + dt * k3[1]];
+    const k4 = f(t + dt, s4);
+
+    return [
+        state[0] + dt / 6 * (k1[0] + 2*k2[0] + 2*k3[0] + k4[0]),
+        state[1] + dt / 6 * (k1[1] + 2*k2[1] + 2*k3[1] + k4[1])
+    ];
+}
+
+function computeBifurcationDiagram(p) {
+    // Practical browser-friendly bifurcation sweep.
+    // Parameter swept: excitation frequency omega.
+    // For each omega, integrate the nonlinear oscillator and sample x once per forcing period
+    // after discarding transients.
+    const omegaN = Math.sqrt(p.k / p.m);
+    const omegaMin = Math.max(0.15, 0.45 * omegaN);
+    const omegaMax = Math.min(25, 1.65 * omegaN);
+
+    const nOmega = 72;
+    const periodsTotal = 75;
+    const discardPeriods = 45;
+    const samplesPerPeriod = 36;
+
+    const xs = [];
+    const omegas = [];
+
+    let state = [p.x0 || 0.001, p.v0 || 0];
+
+    for (let j = 0; j < nOmega; j++) {
+        const omega = omegaMin + (omegaMax - omegaMin) * j / (nOmega - 1);
+        const pLocal = {...p, omega};
+        const T = 2 * Math.PI / omega;
+        const dt = T / samplesPerPeriod;
+
+        let t = 0;
+        let nextSampleT = discardPeriods * T;
+
+        for (let step = 0; step < periodsTotal * samplesPerPeriod; step++) {
+            state = rk4StepForParams(t, state, dt, pLocal);
+            t += dt;
+
+            if (!isFinite(state[0]) || !isFinite(state[1]) || Math.abs(state[0]) > 1e4) {
+                state = [0, 0];
+                break;
+            }
+
+            if (t >= nextSampleT && t <= periodsTotal * T) {
+                xs.push(state[0]);
+                omegas.push(omega);
+                nextSampleT += T;
+            }
+        }
+    }
+
+    return {omega: omegas, x: xs, omegaMin, omegaMax};
+}
+
+function drawPlots(p, result, spec, omegaN, fn, zeta, ratio, omegaPeak) {
+    const layoutBase = {
+        autosize: true,
+        margin: {l: 82, r: 50, t: 70, b: 95},
+        legend: {
+            orientation: "h",
+            x: 0,
+            xanchor: "left",
+            y: -0.28,
+            yanchor: "top",
+            bgcolor: "rgba(255,255,255,0)",
+            borderwidth: 0,
+            font: {family: "Times New Roman, Times, serif", size: 12, color: "#000000"}
+        },
+        hovermode: "x unified",
+        paper_bgcolor: "#ffffff",
+        plot_bgcolor: "#ffffff",
+        font: {family: "Times New Roman, Times, serif", color: "#000000", size: 12},
+        xaxis: {
+            showgrid: true,
+            gridcolor: "rgba(0,0,0,0.12)",
+            zeroline: true,
+            zerolinecolor: "rgba(0,0,0,0.22)",
+            linecolor: "#000000",
+            mirror: true,
+            ticks: "outside",
+            automargin: true,
+            minor: {showgrid: true, gridcolor: "rgba(0,0,0,0.06)", gridwidth: 0.5}
+        },
+        yaxis: {
+            showgrid: true,
+            gridcolor: "rgba(0,0,0,0.12)",
+            zeroline: true,
+            zerolinecolor: "rgba(0,0,0,0.22)",
+            linecolor: "#000000",
+            mirror: true,
+            ticks: "outside",
+            automargin: true,
+            minor: {showgrid: true, gridcolor: "rgba(0,0,0,0.06)", gridwidth: 0.5}
+        }
+    };
+
+    Plotly.react("timePlot", styleVisibleTraces([
+        {x: result.t, y: result.x, mode: "lines", name: "Displacement x(t)", line: {width: 2.2}},
+        {x: result.t, y: result.v, mode: "lines", name: "Velocity v(t)", yaxis: "y2", line: {width: 2.0, dash: "dot"}}
+    ]), professionalLayout(layoutBase, {
+        title: {text: "Time Response: Displacement and Velocity", x: 0.02, xanchor: "left"},
+        xaxis: {title: "Time [s]"},
+        yaxis: {title: "Displacement [m]", range: cleanRange(result.x)},
+        yaxis2: {title: "Velocity [m/s]", overlaying: "y", side: "right", range: cleanRange(result.v)}
+    }), plotConfig);
+
+    Plotly.react("accelPlot", styleVisibleTraces([
+        {x: result.t, y: result.a, mode: "lines", name: "Acceleration", line: {width: 2.1}}
+    ]), professionalLayout(layoutBase, {
+        title: {text: "Acceleration Response", x: 0.02, xanchor: "left"},
+        xaxis: {title: "Time [s]"},
+        yaxis: {title: "Acceleration [m/s²]", range: cleanRange(result.a)}
+    }), plotConfig);
+
+    const restoringForce = result.springForce.map(y => -y);
+    const dampingForce = result.dampingForce.map(y => -y);
+    Plotly.react("forcePlot", styleVisibleTraces([
+        {x: result.t, y: result.force, mode: "lines", name: "External F", line: {width: 2.0}},
+        {x: result.t, y: restoringForce, mode: "lines", name: "Restoring −kx−αx³", line: {width: 1.9}},
+        {x: result.t, y: dampingForce, mode: "lines", name: "Damping −cv", line: {width: 1.9}},
+        {x: result.t, y: result.inertiaForce, mode: "lines", name: "Inertia ma", line: {width: 1.9}}
+    ]), professionalLayout(layoutBase, {
+        title: {text: "Force Balance", x: 0.02, xanchor: "left"},
+        xaxis: {title: "Time [s]"},
+        yaxis: {title: "Force [N]", range: cleanRange([...result.force, ...restoringForce, ...dampingForce, ...result.inertiaForce])}
+    }), plotConfig);
+
+    Plotly.react("phasePlot", styleVisibleTraces([
+        {x: result.x, y: result.v, mode: "lines", name: "Phase trajectory", line: {width: 2.0}}
+    ]), professionalLayout(layoutBase, {
+        title: {text: "Phase Portrait", x: 0.02, xanchor: "left"},
+        xaxis: {title: "Displacement x [m]", range: cleanRange(result.x)},
+        yaxis: {title: "Velocity v [m/s]", range: cleanRange(result.v)}
+    }), plotConfig);
+
+    Plotly.react("energyPlot", styleVisibleTraces([
+        {x: result.t, y: result.kineticEnergy, mode: "lines", name: "Kinetic", line: {width: 1.9}},
+        {x: result.t, y: result.potentialEnergy, mode: "lines", name: "Linear potential", line: {width: 1.9}},
+        {x: result.t, y: result.nonlinearEnergy, mode: "lines", name: "Nonlinear potential", line: {width: 1.9}},
+        {x: result.t, y: result.totalEnergy, mode: "lines", name: "Total", line: {width: 2.3}}
+    ]), professionalLayout(layoutBase, {
+        title: {text: "Energy Exchange", x: 0.02, xanchor: "left"},
+        xaxis: {title: "Time [s]"},
+        yaxis: {title: "Energy [J]", range: cleanRange([...result.kineticEnergy, ...result.potentialEnergy, ...result.nonlinearEnergy, ...result.totalEnergy])}
+    }), plotConfig);
+
+    Plotly.react("spectrumPlot", styleVisibleTraces([
+        {x: spec.freq, y: spec.amp, mode: "lines", name: "Displacement spectrum", line: {width: 2.1}}
+    ]), professionalLayout(layoutBase, {
+        title: {text: "Approximate Displacement Spectrum", x: 0.02, xanchor: "left"},
+        xaxis: {title: "Frequency [Hz]", range: [0, Math.max(1, Math.min(12, Math.max(fn, p.omega/(2*Math.PI))*3))]},
+        yaxis: {title: "Amplitude [m]", rangemode: "tozero"},
+        shapes: [
+            {type:"line", x0:p.omega/(2*Math.PI), x1:p.omega/(2*Math.PI), y0:0, y1:1, yref:"paper", line:{dash:"dot", width:2}},
+            {type:"line", x0:fn, x1:fn, y0:0, y1:1, yref:"paper", line:{dash:"dash", width:2}}
+        ],
+        annotations: [
+            {x:p.omega/(2*Math.PI), y:0.95, yref:"paper", text:"forcing", showarrow:false, bgcolor:"white"},
+            {x:fn, y:0.82, yref:"paper", text:"natural", showarrow:false, bgcolor:"white"}
+        ]
+    }), plotConfig);
+
+    const pc = poincareSection(latestFullResult.t, latestFullResult.x, latestFullResult.v, p.omega);
+    Plotly.react("poincarePlot", styleVisibleTraces([
+        {x: pc.px, y: pc.pv, mode: "markers", name: "Poincaré points", marker: {size: 7, opacity: 0.82}}
+    ]), professionalLayout(layoutBase, {
+        title: {text: "Poincaré Section", x: 0.02, xanchor: "left"},
+        xaxis: {title: "x sampled once per period [m]", range: cleanRange(pc.px)},
+        yaxis: {title: "v sampled once per period [m/s]", range: cleanRange(pc.pv)}
+    }), plotConfig);
+
+    const omegaRange = [], amplitude = [], transmissibility = [];
+    const maxOmega = Math.max(3*omegaN, p.omega*1.2);
+    for (let i = 0; i < 1300; i++) {
+        const om = 0.05 + i*(maxOmega - 0.05)/1299;
+        const r = om/omegaN;
+        const amp = linearAmplitude(p, om);
+        const T = Math.sqrt((1 + Math.pow(2*zeta*r,2))/(Math.pow(1-r*r,2)+Math.pow(2*zeta*r,2)));
+        omegaRange.push(om); amplitude.push(amp); transmissibility.push(T);
+    }
+
+    const shapesFRF = [
+        {type:"line", x0:omegaN, x1:omegaN, y0:0, y1:1, yref:"paper", line:{dash:"dash", width:2}},
+        {type:"line", x0:p.omega, x1:p.omega, y0:0, y1:1, yref:"paper", line:{dash:"dot", width:2}}
+    ];
+    if (omegaPeak) shapesFRF.push({type:"line", x0:omegaPeak, x1:omegaPeak, y0:0, y1:1, yref:"paper", line:{dash:"longdash", width:2}});
+
+    Plotly.react("resonancePlot", styleVisibleTraces([
+        {x: omegaRange, y: amplitude, mode: "lines", name: "Linear amplitude", line: {width: 2.3}}
+    ]), professionalLayout(layoutBase, {
+        title: {text: "Linear Amplitude–Frequency Response", x: 0.02, xanchor: "left"},
+        xaxis: {title: "Excitation frequency ω [rad/s]"},
+        yaxis: {title: "Steady-state amplitude [m]", rangemode: "tozero"},
+        shapes: shapesFRF,
+        annotations: [
+            {x:omegaN, y:1, yref:"paper", text:"ωₙ", showarrow:false, yshift:10, bgcolor:"white"},
+            {x:p.omega, y:0.87, yref:"paper", text:"selected ω", showarrow:false, yshift:10, bgcolor:"white"}
+        ]
+    }), plotConfig);
+
+    Plotly.react("transmissibilityPlot", styleVisibleTraces([
+        {x: omegaRange.map(w=>w/omegaN), y: transmissibility, mode:"lines", name:"Force transmissibility", line: {width: 2.2}}
+    ]), professionalLayout(layoutBase, {
+        title: {text: "Linear Force Transmissibility", x: 0.02, xanchor: "left"},
+        xaxis: {title: "Frequency ratio r = ω/ωₙ"},
+        yaxis: {title: "Force transmissibility ratio", rangemode: "tozero"},
+        shapes: [
+            {type:"line", x0:1, x1:1, y0:0, y1:1, yref:"paper", line:{dash:"dash", width:2}},
+            {type:"line", x0:ratio, x1:ratio, y0:0, y1:1, yref:"paper", line:{dash:"dot", width:2}}
+        ]
+    }), plotConfig);
+
+    const sensNames = ["m -20%","m","m +20%","c -20%","c","c +20%","k -20%","k","k +20%"];
+    const sensVals = [
+        linearAmplitude({...p, m:p.m*0.8}, p.omega),
+        linearAmplitude(p, p.omega),
+        linearAmplitude({...p, m:p.m*1.2}, p.omega),
+        linearAmplitude({...p, c:Math.max(0, p.c*0.8)}, p.omega),
+        linearAmplitude(p, p.omega),
+        linearAmplitude({...p, c:p.c*1.2}, p.omega),
+        linearAmplitude({...p, k:p.k*0.8}, p.omega),
+        linearAmplitude(p, p.omega),
+        linearAmplitude({...p, k:p.k*1.2}, p.omega)
+    ];
+
+    Plotly.react("sensitivityPlot", styleVisibleTraces([
+        {x: sensNames, y: sensVals, type: "bar", name: "Amplitude", marker: {opacity: 0.88}}
+    ]), professionalLayout(layoutBase, {
+        title: {text: "Parameter Sensitivity Near Current Point", x: 0.02, xanchor: "left"},
+        xaxis: {title: "Parameter perturbation", tickangle: -25},
+        yaxis: {title: "Linear amplitude at selected ω [m]", rangemode: "tozero"}
+    }), plotConfig);
+
+    const lowC = Math.max(0.001, p.c*0.35);
+    const highC = Math.max(0.001, p.c*2.5);
+    Plotly.react("dampingComparisonPlot", styleVisibleTraces([
+        {x: omegaRange, y: omegaRange.map(w => linearAmplitude({...p, c:lowC}, w)), mode:"lines", name:"Lower damping", line: {width: 2.0, dash: "dot"}},
+        {x: omegaRange, y: omegaRange.map(w => linearAmplitude(p, w)), mode:"lines", name:"Current damping", line: {width: 2.4}},
+        {x: omegaRange, y: omegaRange.map(w => linearAmplitude({...p, c:highC}, w)), mode:"lines", name:"Higher damping", line: {width: 2.0, dash: "dash"}}
+    ]), professionalLayout(layoutBase, {
+        title: {text: "Damping Comparison: Resonance Curves", x: 0.02, xanchor: "left"},
+        xaxis: {title: "Excitation frequency ω [rad/s]"},
+        yaxis: {title: "Amplitude [m]", rangemode: "tozero"}
+    }), plotConfig);
+
+    const bif = computeBifurcationDiagram(p);
+    Plotly.react("bifurcationPlot", styleVisibleTraces([
+        {
+            x: bif.omega,
+            y: bif.x,
+            mode: "markers",
+            name: "Stroboscopic samples",
+            marker: {size: 4.5, opacity: 0.72}
+        }
+    ]), professionalLayout(layoutBase, {
+        title: {text: "Bifurcation Diagram: Stroboscopic Displacement vs Excitation Frequency", x: 0.02, xanchor: "left"},
+        xaxis: {title: "Excitation frequency ω [rad/s]", range: [bif.omegaMin, bif.omegaMax]},
+        yaxis: {title: "Sampled displacement x [m]", range: cleanRange(bif.x)}
+    }), plotConfig);
+}
+
+
+function downloadAllVisiblePlots() {
+    const plotIds = [
+        "timePlot", "accelPlot", "forcePlot", "phasePlot", "energyPlot",
+        "spectrumPlot", "poincarePlot", "resonancePlot", "transmissibilityPlot",
+        "sensitivityPlot", "dampingComparisonPlot"
+    ];
+
+    let delay = 0;
+    plotIds.forEach((id) => {
+        const node = el(id);
+        if (!node || node.offsetParent === null || !node.data || !node.layout) return;
+
+        setTimeout(() => {
+            Plotly.downloadImage(node, {
+                format: "png",
+                width: 1700,
+                height: 1100,
+                scale: 2,
+                filename: "vibrationlab_" + id + "_full_axes"
+            });
+        }, delay);
+
+        delay += 500;
+    });
+}
+
+function copyParameters() {
+    el("parameterText").select();
+    document.execCommand("copy");
+}
+
+function downloadCSV() {
+    if (!latestFullResult) return;
+    const r = latestFullResult;
+    let csv = "t,x,v,a,force,springForce,dampingForce,inertiaForce,kineticEnergy,potentialEnergy,nonlinearEnergy,totalEnergy,inputPower,dissipatedPower\n";
+    for (let i = 0; i < r.t.length; i++) {
+        csv += [
+            r.t[i], r.x[i], r.v[i], r.a[i], r.force[i], r.springForce[i], r.dampingForce[i],
+            r.inertiaForce[i], r.kineticEnergy[i], r.potentialEnergy[i], r.nonlinearEnergy[i],
+            r.totalEnergy[i], r.inputPower[i], r.dissipatedPower[i]
+        ].join(",") + "\n";
+    }
+    const blob = new Blob([csv], {type: "text/csv"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "vibration_response.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+document.querySelectorAll("input, select").forEach(input => {
+    input.addEventListener("input", update);
+    input.addEventListener("change", update);
+});
+
+setLearningMode("beginner");
+update();
+</script>
+
+</body>
+</html>
